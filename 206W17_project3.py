@@ -76,13 +76,14 @@ def get_user_tweets(phrase):
 # Write an invocation to the function for the "umich" user timeline and save the result in a variable called umich_tweets:
 umich_tweets= get_user_tweets("umich")
 
-
-
 ## Task 2 - Creating database and loading data into database
 
 # You will be creating a database file: project3_tweets.db
 # Note that running the tests will actually create this file for you, but will not do anything else to it like create any tables; you should still start it in exactly the same way as if the tests did not do that! 
 # The database file should have 2 tables, and each should have the following columns... 
+
+conn = sqlite3.connect('project3_tweets.db')
+cur = conn.cursor()
 
 # table Tweets, with columns:
 # - tweet_id (containing the string id belonging to the Tweet itself, from the data you got from Twitter) -- this column should be the PRIMARY KEY of this table
@@ -91,19 +92,60 @@ umich_tweets= get_user_tweets("umich")
 # - time_posted (the time at which the tweet was created)
 # - retweets (containing the integer representing the number of times the tweet has been retweeted)
 
+cur.execute('DROP TABLE IF EXISTS Tweets')
+
+table_spec1 = "CREATE TABLE IF NOT EXISTS Tweets(tweet_id INTEGER PRIMARY KEY, text TEXT, user_posted TEXT time_posted TIMESTAMP, retweets INTEGER)"
+
+cur.execute(table_spec1)
+
 # table Users, with columns:
 # - user_id (containing the string id belonging to the user, from twitter data) -- this column should be the PRIMARY KEY of this table
 # - screen_name (containing the screen name of the user on Twitter)
 # - num_favs (containing the number of tweets that user has favorited)
 # - description (text containing the description of that user on Twitter, e.g. "Lecturer IV at UMSI focusing on programming" or "I tweet about a lot of things" or "Software engineer, librarian, lover of dogs..." -- whatever it is. OK if an empty string)
 
+cur.execute('DROP TABLE IF EXISTS Users')
+
+table_spec2 = "CREATE TABLE IF NOT EXISTS Users(user_id INTEGER PRIMARY KEY, screen_name TEXT, num_favs INTEGER description TEXT)"
+
+cur.execute(table_spec2)
+
 ## You should load into the Users table:
 # The umich user, and all of the data about users that are mentioned in the umich timeline. 
 # NOTE: For example, if the user with the "TedXUM" screen name is mentioned in the umich timeline, that Twitter user's info should be in the Users table, etc.
 
+# statement1 = 'INSERT INTO Users VALUES (?, ?, ?, ?)'
+
+# for x in umich_tweets:
+
+# 	user_id=x["id_str"]
+# 	screen_name=x["user"]["screen_name"]
+# 	num_favs=x["created_at"]
+# 	description=x["text"]
+
+# 	total_tweets=(user_id, screen_name, num_favs, description)
+
+# 	cur.execute(statement1,total_tweets)
+
+
 ## You should load into the Tweets table: 
 # Info about all the tweets (at least 20) that you gather from the umich timeline.
 # NOTE: Be careful that you have the correct user ID reference in the user_id column! See below hints.
+
+statement2 = "INSERT INTO Tweets VALUES (?, ?, ?, ?, ?)"
+
+for x in umich_tweets:
+
+	tweet_id=x["id_str"]
+	text=x["text"]
+	user_posted=x["user"]["screen_name"]
+	time_posted=x["created_at"]
+	retweets=x["retweet_count"]
+
+	total_tweets=(tweet_id, text, user_posted, time_posted, retweets)
+
+	cur.execute(statement2,total_tweets)
+
 
 ## HINT: There's a Tweepy method to get user info that we've looked at before, so when you have a user id or screenname you can find alllll the info you want about the user.
 ## HINT #2: You may want to go back to a structure we used in class this week to ensure that you reference the user correctly in each Tweet record.
@@ -145,6 +187,7 @@ umich_tweets= get_user_tweets("umich")
 
 ## Use a set comprehension to get a set of all words (combinations of characters separated by whitespace) among the descriptions in the descriptions_fav_users list. Save the resulting set in a variable called description_words.
 
+description_words={x for x in [[word for word in description.split()] for description in descriptions_fav_users]}
 
 
 ## Use a Counter in the collections library to find the most common character among all of the descriptions in the descriptions_fav_users list. Save that most common character in a variable called most_common_char. Break any tie alphabetically (but using a Counter will do a lot of work for you...).
