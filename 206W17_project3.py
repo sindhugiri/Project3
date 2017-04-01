@@ -15,7 +15,7 @@ import json
 import sqlite3
 
 ## Your name: Sindhu Giri 
-## The names of anyone you worked with on this project: Madi Atkins 
+## The names of anyone you worked with on this project:
 
 #####
 
@@ -49,7 +49,6 @@ except:
 
 
 # Define your function get_user_tweets here:
-
 def get_user_tweets(phrase):
 	text_twitter = []
 	public_tweets = api.user_timeline(id=phrase)
@@ -73,8 +72,13 @@ def get_user_tweets(phrase):
 		
 	return text_twitter
 
+
+
+
 # Write an invocation to the function for the "umich" user timeline and save the result in a variable called umich_tweets:
+
 umich_tweets= get_user_tweets("umich")
+
 
 ## Task 2 - Creating database and loading data into database
 
@@ -86,77 +90,80 @@ conn = sqlite3.connect('project3_tweets.db')
 cur = conn.cursor()
 
 # table Tweets, with columns:
-# - tweet_id (containing the string id belonging to the Tweet itself, from the data you got from Twitter) -- this column should be the PRIMARY KEY of this table
+# - tweet_id (containing the string id belonging to the Tweet itself, from the data you got from Twitter -- note the id_str attribute) -- this column should be the PRIMARY KEY of this table
 # - text (containing the text of the Tweet)
-# - user_posted (an ID string, referencing the Users table, see below)
+# - user_id (an ID string, referencing the Users table, see below)
 # - time_posted (the time at which the tweet was created)
 # - retweets (containing the integer representing the number of times the tweet has been retweeted)
-
 cur.execute('DROP TABLE IF EXISTS Tweets')
 
-table_spec1 = "CREATE TABLE IF NOT EXISTS Tweets(tweet_id INTEGER PRIMARY KEY, text TEXT, user_posted TEXT time_posted TIMESTAMP, retweets INTEGER)"
+table_spec1 = "CREATE TABLE IF NOT EXISTS Tweets(tweet_id INTEGER PRIMARY KEY, text TEXT, user_id TEXT, time_posted TIMESTAMP, retweets INTEGER)"
 
 cur.execute(table_spec1)
 
 # table Users, with columns:
-# - user_id (containing the string id belonging to the user, from twitter data) -- this column should be the PRIMARY KEY of this table
+# - user_id (containing the string id belonging to the user, from twitter data -- note the id_str attribute) -- this column should be the PRIMARY KEY of this table
 # - screen_name (containing the screen name of the user on Twitter)
 # - num_favs (containing the number of tweets that user has favorited)
 # - description (text containing the description of that user on Twitter, e.g. "Lecturer IV at UMSI focusing on programming" or "I tweet about a lot of things" or "Software engineer, librarian, lover of dogs..." -- whatever it is. OK if an empty string)
-
 cur.execute('DROP TABLE IF EXISTS Users')
 
-table_spec2 = "CREATE TABLE IF NOT EXISTS Users(user_id INTEGER PRIMARY KEY, screen_name TEXT, num_favs INTEGER description TEXT)"
+table_spec2 = "CREATE TABLE IF NOT EXISTS Users(user_id TEXT PRIMARY KEY, screen_name TEXT, num_favs INTEGER, description TEXT)"
 
 cur.execute(table_spec2)
+
+
 
 ## You should load into the Users table:
 # The umich user, and all of the data about users that are mentioned in the umich timeline. 
 # NOTE: For example, if the user with the "TedXUM" screen name is mentioned in the umich timeline, that Twitter user's info should be in the Users table, etc.
 
-# statement1 = 'INSERT INTO Users VALUES (?, ?, ?, ?)'
+statement1 = "INSERT or IGNORE INTO Users VALUES(?,?,?,?)"
 
-# for x in umich_tweets:
+user_ids = []
+for tweet in umich_tweets:
+	for user in tweet["entities"]["user_mentions"]:
+		user_ids.append(user["screen_name"])
 
-# 	user_id=x["id_str"]
-# 	screen_name=x["user"]["screen_name"]
-# 	num_favs=x["created_at"]
-# 	description=x["text"]
+user_ids.insert(0, '@umich')
 
-# 	total_tweets=(user_id, screen_name, num_favs, description)
+for user in user_ids:
+	user = api.get_user(user)
+	user_id = user["id"]
+	screen_name=user["screen_name"]
+	num_favs= user["favourites_count"]
+	description=user["description"]
 
-# 	cur.execute(statement1,total_tweets)
+	total_tweet=(user_id, screen_name, num_favs, description)
 
+	cur.execute(statement1,total_tweet)
+	
+    
 
 ## You should load into the Tweets table: 
 # Info about all the tweets (at least 20) that you gather from the umich timeline.
 # NOTE: Be careful that you have the correct user ID reference in the user_id column! See below hints.
 
-statement2 = "INSERT INTO Tweets VALUES (?, ?, ?, ?, ?)"
+statement2 = 'INSERT INTO Tweets VALUES (?, ?, ?, ?, ?)'
 
 for x in umich_tweets:
 
 	tweet_id=x["id_str"]
 	text=x["text"]
-	user_posted=x["user"]["screen_name"]
+	user_id=x["user"]["screen_name"]
 	time_posted=x["created_at"]
 	retweets=x["retweet_count"]
 
-	total_tweets=(tweet_id, text, user_posted, time_posted, retweets)
+	total_tweet=(tweet_id, text, user_id, time_posted, retweets)
 
-	cur.execute(statement2,total_tweets)
+	cur.execute(statement2,total_tweet)
 
+
+conn.commit()
 
 ## HINT: There's a Tweepy method to get user info that we've looked at before, so when you have a user id or screenname you can find alllll the info you want about the user.
 ## HINT #2: You may want to go back to a structure we used in class this week to ensure that you reference the user correctly in each Tweet record.
 ## HINT #3: The users mentioned in each tweet are included in the tweet dictionary -- you don't need to do any manipulation of the Tweet text to find out which they are! Do some nested data investigation on a dictionary that represents 1 tweet to see it!
-
-
-
-
-
-
-
 
 
 
@@ -167,38 +174,57 @@ for x in umich_tweets:
 
 # Make a query to select all of the records in the Users database. Save the list of tuples in a variable called users_info.
 
+x="SELECT user_id, screen_name, num_favs, description FROM Users"
+cur.execute(x)
+users_info = cur.fetchall()
+
 # Make a query to select all of the user screen names from the database. Save a resulting list of strings (NOT tuples, the strings inside them!) in the variable screen_names. HINT: a list comprehension will make this easier to complete!
+
+y="SELECT screen_name from Users"
+r= cur.execute(y)
+screen_names= [x[0] for x in r.fetchall()]
 
 
 # Make a query to select all of the tweets (full rows of tweet information) that have been retweeted more than 25 times. Save the result (a list of tuples, or an empty list) in a variable called more_than_25_rts.
 
+two="SELECT *FROM Tweets WHERE retweets>0"
+cur.execute(two)
+more_than_25_rts=cur.fetchall()
 
 
 # Make a query to select all the descriptions (descriptions only) of the users who have favorited more than 25 tweets. Access all those strings, and save them in a variable called descriptions_fav_users, which should ultimately be a list of strings.
 
+w= "SELECT description FROM Users WHERE num_favs > 25"
+e=cur.execute(w)
+
+descriptions_fav_users=[x[0] for x in e.fetchall()]
 
 
 # Make a query using an INNER JOIN to get a list of tuples with 2 elements in each tuple: the user screenname and the text of the tweet -- for each tweet that has been retweeted more than 50 times. Save the resulting list of tuples in a variable called joined_result.
 
+f="SELECT screen_name, text FROM Users INNER JOIN Tweets WHERE Tweets.retweets > 10"
+g=cur.execute(f)
 
-
+joined_result= g.fetchall()
 
 ## Task 4 - Manipulating data with comprehensions & libraries
 
 ## Use a set comprehension to get a set of all words (combinations of characters separated by whitespace) among the descriptions in the descriptions_fav_users list. Save the resulting set in a variable called description_words.
 
-description_words={x for x in [[word for word in description.split()] for description in descriptions_fav_users]}
+description_words = set(x for x in descriptions_fav_users) 
 
 
 ## Use a Counter in the collections library to find the most common character among all of the descriptions in the descriptions_fav_users list. Save that most common character in a variable called most_common_char. Break any tie alphabetically (but using a Counter will do a lot of work for you...).
 
-
+most_common_char = collections.Counter(descriptions_fav_users).most_common(1)
+most_common_char = most_common_char[0][0]
 
 ## Putting it all together...
 # Write code to create a dictionary whose keys are Twitter screen names and whose associated values are lists of tweet texts that that user posted. You may need to make additional queries to your database! To do this, you can use, and must use at least one of: the DefaultDict container in the collections library, a dictionary comprehension, list comprehension(s). Y
 # You should save the final dictionary in a variable called twitter_info_diction.
 
 
+#twitter_info_diction=
 
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END OF THE FILE HERE SO YOU DO NOT LOCK YOUR DATABASE (it's fixable, but it's a pain). ###
 
