@@ -174,13 +174,13 @@ conn.commit()
 
 # Make a query to select all of the records in the Users database. Save the list of tuples in a variable called users_info.
 
-x="SELECT user_id, screen_name, num_favs, description FROM Users"
+x="SELECT *FROM Users"
 cur.execute(x)
 users_info = cur.fetchall()
 
 # Make a query to select all of the user screen names from the database. Save a resulting list of strings (NOT tuples, the strings inside them!) in the variable screen_names. HINT: a list comprehension will make this easier to complete!
 
-y="SELECT screen_name from Users"
+y="SELECT screen_name FROM Users"
 r= cur.execute(y)
 screen_names= [x[0] for x in r.fetchall()]
 
@@ -194,7 +194,7 @@ more_than_25_rts=cur.fetchall()
 
 # Make a query to select all the descriptions (descriptions only) of the users who have favorited more than 25 tweets. Access all those strings, and save them in a variable called descriptions_fav_users, which should ultimately be a list of strings.
 
-w= "SELECT description FROM Users WHERE num_favs > 50"
+w= "SELECT description FROM Users WHERE num_favs > 25"
 e=cur.execute(w)
 
 descriptions_fav_users=[x[0] for x in e.fetchall()]
